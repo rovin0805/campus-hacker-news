@@ -16,9 +16,25 @@ function getData(url) {
 
 function getNewsFeed() {
   const newsFeed = getData(NEWS_URL);
+  const maxPage = Math.ceil(newsFeed.length / store.pageSize);
   const newsList = [];
+  const newsFeedMarkup = '{{__news_feed__}}';
+  const prevPageMarkup = '{{__prev_page__}}';
+  const nextPageMarkup = '{{__next_page__}}';
 
-  newsList.push('<ul>');
+  let template = `
+    <div>
+      <h1>Hacker News</h1>
+      <ul>
+        ${newsFeedMarkup}
+      </ul>
+      <div>
+        <a href="#/page/${prevPageMarkup}">이전 페이지</a>
+        <a href="#/page/${nextPageMarkup}">다음 페이지</a>
+      </div>
+    </div>
+  `;
+
   for (
     let i = (store.currentPage - 1) * store.pageSize;
     i < store.currentPage * store.pageSize;
@@ -32,18 +48,18 @@ function getNewsFeed() {
       </li>
     `);
   }
-  newsList.push('</ul>');
 
-  newsList.push(`
-    <div>
-      <a href="#/page/${
-        store.currentPage > 1 ? store.currentPage - 1 : 1
-      }">이전 페이지</a>
-      <a href="#/page/${store.currentPage + 1}">다음 페이지</a>
-    </div>
-  `);
+  template = template.replace(newsFeedMarkup, newsList.join(''));
+  template = template.replace(
+    prevPageMarkup,
+    store.currentPage > 1 ? store.currentPage - 1 : 1
+  );
+  template = template.replace(
+    nextPageMarkup,
+    store.currentPage === maxPage ? store.currentPage : store.currentPage + 1
+  );
 
-  container.innerHTML = newsList.join('');
+  container.innerHTML = template;
 }
 
 function getFeedDetail() {
