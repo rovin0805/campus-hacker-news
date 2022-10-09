@@ -1,25 +1,64 @@
+type StoreType = {
+  currentPage: number;
+  pageSize: number;
+  feeds: FeedType[];
+};
+
+type News = {
+  id: number;
+  time_ago: string;
+  title: string;
+  url: string;
+  user: string;
+  content: string;
+};
+
+type FeedType = News & {
+  comments_count: number;
+  points: number;
+  read?: boolean;
+};
+
+type FeedDetailType = News & {
+  comments: CommentType[];
+};
+
+type CommentType = News & {
+  level: number;
+  comments: CommentType[];
+};
+
+const container = document.getElementById('root');
+const ajax = new XMLHttpRequest();
 const BASE_URL = 'https://api.hnpwa.com/v0';
 const NEWS_URL = `${BASE_URL}/news/1.json`;
 const CONTENT_URL = `${BASE_URL}/item/@id.json`;
-const ajax = new XMLHttpRequest();
-const container = document.getElementById('root');
-const store = {
+
+const store: StoreType = {
   currentPage: 1,
   pageSize: 10,
   feeds: [],
 };
 
-function getData(url) {
+function getData<T>(url: string): T {
   ajax.open('GET', url, false);
   ajax.send();
   return JSON.parse(ajax.response);
 }
 
-function makeFeeds(feeds) {
+function makeFeeds(feeds: FeedType[]) {
   for (let i = 0; i < feeds.length; i++) {
     feeds[i].read = false;
   }
   return feeds;
+}
+
+function updateView(html: string) {
+  if (container) {
+    container.innerHTML = html;
+  } else {
+    console.error('There is no root container.');
+  }
 }
 
 function getNewsFeed() {
@@ -56,7 +95,7 @@ function getNewsFeed() {
   `;
 
   if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(getData(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(getData<FeedType[]>(NEWS_URL));
   }
 
   for (
@@ -92,19 +131,21 @@ function getNewsFeed() {
   template = template.replace(newsFeedMarkup, newsList.join(''));
   template = template.replace(
     prevPageMarkup,
-    store.currentPage > 1 ? store.currentPage - 1 : 1
+    String(store.currentPage > 1 ? store.currentPage - 1 : 1)
   );
   template = template.replace(
     nextPageMarkup,
-    store.currentPage === maxPage ? store.currentPage : store.currentPage + 1
+    String(
+      store.currentPage === maxPage ? store.currentPage : store.currentPage + 1
+    )
   );
 
-  container.innerHTML = template;
+  updateView(template);
 }
 
 function getFeedDetail() {
   const id = location.hash.substring(7);
-  const newsContent = getData(CONTENT_URL.replace(`@id`, id));
+  const newsContent = getData<FeedDetailType>(CONTENT_URL.replace(`@id`, id));
   const commentsMarkup = '{{__comments__}}';
 
   let template = `
@@ -140,33 +181,34 @@ function getFeedDetail() {
     }
   }
 
-  function makeComments(comments, called = 0) {
-    const commentsString = [];
+  updateView(
+    template.replace(commentsMarkup, makeComments(newsContent.comments))
+  );
+}
 
-    for (let i = 0; i < comments.length; i++) {
-      commentsString.push(`
-      <div style="padding-left: ${called * 40}px;" class="mt-4">
-        <div class="text-gray-400">
-          <i class="fa fa-sort-up mr-2"></i>
-          <strong>${comments[i].user}</strong> ${comments[i].time_ago}
-        </div>
-        <p class="text-gray-700">${comments[i].content}</p>
-      </div>      
-    `);
+function makeComments(comments: CommentType[]): string {
+  const commentsString = [];
 
-      // 대댓글
-      if (comments[i].comments.length > 0) {
-        commentsString.push(makeComments(comments[i].comments, called + 1));
-      }
+  for (let i = 0; i < comments.length; i++) {
+    const comment = comments[i];
 
-      return commentsString.join('');
+    commentsString.push(`
+    <div style="padding-left: ${comment.level * 40}px;" class="mt-4">
+      <div class="text-gray-400">
+        <i class="fa fa-sort-up mr-2"></i>
+        <strong>${comment.user}</strong> ${comment.time_ago}
+      </div>
+      <p class="text-gray-700">${comment.content}</p>
+    </div>      
+  `);
+
+    // 대댓글
+    if (comment.comments.length > 0) {
+      commentsString.push(makeComments(comment.comments));
     }
   }
 
-  container.innerHTML = template.replace(
-    commentsMarkup,
-    makeComments(newsContent.comments)
-  );
+  return commentsString.join('');
 }
 
 function router() {
