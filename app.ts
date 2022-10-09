@@ -1,32 +1,32 @@
-type StoreType = {
+interface StoreType {
   currentPage: number;
   pageSize: number;
   feeds: FeedType[];
-};
+}
 
-type News = {
-  id: number;
-  time_ago: string;
-  title: string;
-  url: string;
-  user: string;
-  content: string;
-};
+interface News {
+  readonly id: number;
+  readonly time_ago: string;
+  readonly title: string;
+  readonly url: string;
+  readonly user: string;
+  readonly content: string;
+}
 
-type FeedType = News & {
-  comments_count: number;
-  points: number;
+interface FeedType extends News {
+  readonly comments_count: number;
+  readonly points: number;
   read?: boolean;
-};
+}
 
-type FeedDetailType = News & {
-  comments: CommentType[];
-};
+interface FeedDetailType extends News {
+  readonly comments: CommentType[];
+}
 
-type CommentType = News & {
-  level: number;
-  comments: CommentType[];
-};
+interface CommentType extends News {
+  readonly level: number;
+  readonly comments: CommentType[];
+}
 
 const container = document.getElementById('root');
 const ajax = new XMLHttpRequest();
