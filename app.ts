@@ -40,33 +40,47 @@ const store: IStore = {
   feeds: [],
 };
 
+function applyApiMixins(targetClass: any, baseClasses: any[]) {
+  // extends 상속에 비해 유연성, 다중상속 가능
+  baseClasses.forEach((baseClass) => {
+    Object.getOwnPropertyNames(baseClass.prototype).forEach((name) => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        baseClass.prototype,
+        name
+      );
+      if (descriptor) {
+        Object.defineProperty(targetClass.prototype, name, descriptor);
+      }
+    });
+  });
+}
+
 class Api {
-  url: string;
-  ajax: XMLHttpRequest;
-
-  constructor(url: string) {
-    this.url = url;
-    this.ajax = new XMLHttpRequest();
-  }
-
-  protected getRequest<AjaxResponse>(): AjaxResponse {
-    this.ajax.open('GET', this.url, false);
-    this.ajax.send();
-    return JSON.parse(this.ajax.response);
+  protected getRequest<AjaxResponse>(url: string): AjaxResponse {
+    const ajax = new XMLHttpRequest();
+    ajax.open('GET', url, false);
+    ajax.send();
+    return JSON.parse(ajax.response);
   }
 }
 
-class FeedsApi extends Api {
+class FeedsApi {
   getData() {
-    return this.getRequest<IFeed[]>();
+    return this.getRequest<IFeed[]>(NEWS_URL);
   }
 }
 
-class FeedDetailApi extends Api {
-  getData() {
-    return this.getRequest<IFeedDetail>();
+class FeedDetailApi {
+  getData(id: string) {
+    return this.getRequest<IFeedDetail>(CONTENT_URL.replace(`@id`, id));
   }
 }
+
+interface FeedsApi extends Api {}
+interface FeedDetailApi extends Api {}
+
+applyApiMixins(FeedsApi, [Api]);
+applyApiMixins(FeedDetailApi, [Api]);
 
 function makeFeeds(feeds: IFeed[]) {
   for (let i = 0; i < feeds.length; i++) {
@@ -84,7 +98,7 @@ function updateView(html: string) {
 }
 
 function getNewsFeed() {
-  const api = new FeedsApi(NEWS_URL);
+  const api = new FeedsApi();
   let newsFeed = store.feeds;
   const maxPage = Math.ceil(newsFeed.length / store.pageSize);
   const newsList = [];
@@ -168,8 +182,8 @@ function getNewsFeed() {
 
 function getFeedDetail() {
   const id = location.hash.substring(7);
-  const api = new FeedDetailApi(CONTENT_URL.replace(`@id`, id));
-  const newsContent = api.getData();
+  const api = new FeedDetailApi();
+  const newsContent = api.getData(id);
   const commentsMarkup = '{{__comments__}}';
 
   let template = `
