@@ -1,7 +1,7 @@
-interface StoreType {
+interface IStore {
   currentPage: number;
   pageSize: number;
-  feeds: FeedType[];
+  feeds: IFeed[];
 }
 
 interface News {
@@ -13,19 +13,19 @@ interface News {
   readonly content: string;
 }
 
-interface FeedType extends News {
+interface IFeed extends News {
   readonly comments_count: number;
   readonly points: number;
   read?: boolean;
 }
 
-interface FeedDetailType extends News {
-  readonly comments: CommentType[];
+interface IFeedDetail extends News {
+  readonly comments: IComment[];
 }
 
-interface CommentType extends News {
+interface IComment extends News {
   readonly level: number;
-  readonly comments: CommentType[];
+  readonly comments: IComment[];
 }
 
 const container = document.getElementById('root');
@@ -34,19 +34,41 @@ const BASE_URL = 'https://api.hnpwa.com/v0';
 const NEWS_URL = `${BASE_URL}/news/1.json`;
 const CONTENT_URL = `${BASE_URL}/item/@id.json`;
 
-const store: StoreType = {
+const store: IStore = {
   currentPage: 1,
   pageSize: 10,
   feeds: [],
 };
 
-function getData<T>(url: string): T {
-  ajax.open('GET', url, false);
-  ajax.send();
-  return JSON.parse(ajax.response);
+class Api {
+  url: string;
+  ajax: XMLHttpRequest;
+
+  constructor(url: string) {
+    this.url = url;
+    this.ajax = new XMLHttpRequest();
+  }
+
+  protected getRequest<AjaxResponse>(): AjaxResponse {
+    this.ajax.open('GET', this.url, false);
+    this.ajax.send();
+    return JSON.parse(this.ajax.response);
+  }
 }
 
-function makeFeeds(feeds: FeedType[]) {
+class FeedsApi extends Api {
+  getData() {
+    return this.getRequest<IFeed[]>();
+  }
+}
+
+class FeedDetailApi extends Api {
+  getData() {
+    return this.getRequest<IFeedDetail>();
+  }
+}
+
+function makeFeeds(feeds: IFeed[]) {
   for (let i = 0; i < feeds.length; i++) {
     feeds[i].read = false;
   }
@@ -62,6 +84,7 @@ function updateView(html: string) {
 }
 
 function getNewsFeed() {
+  const api = new FeedsApi(NEWS_URL);
   let newsFeed = store.feeds;
   const maxPage = Math.ceil(newsFeed.length / store.pageSize);
   const newsList = [];
@@ -95,7 +118,7 @@ function getNewsFeed() {
   `;
 
   if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(getData<FeedType[]>(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(api.getData());
   }
 
   for (
@@ -145,7 +168,8 @@ function getNewsFeed() {
 
 function getFeedDetail() {
   const id = location.hash.substring(7);
-  const newsContent = getData<FeedDetailType>(CONTENT_URL.replace(`@id`, id));
+  const api = new FeedDetailApi(CONTENT_URL.replace(`@id`, id));
+  const newsContent = api.getData();
   const commentsMarkup = '{{__comments__}}';
 
   let template = `
@@ -186,7 +210,7 @@ function getFeedDetail() {
   );
 }
 
-function makeComments(comments: CommentType[]): string {
+function makeComments(comments: IComment[]): string {
   const commentsString = [];
 
   for (let i = 0; i < comments.length; i++) {
