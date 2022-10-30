@@ -1,18 +1,13 @@
 import View from '../core/view';
 
-export interface Store {
-  feeds: NewsFeed[];
-  currentPage: number;
-}
-
 export interface NewsStore {
   getAllFeeds: () => NewsFeed[];
-  getFeed: (position: number) => NewsFeed;
+  getFeed: (position: number) => NewsFeed;  
   setFeeds: (feeds: NewsFeed[]) => void;
   makeRead: (id: number) => void;
   hasFeeds: boolean;
   currentPage: number;
-  numberOfFeeds: number;
+  numberOfFeed: number;  
   nextPage: number;
   prevPage: number;
 }
@@ -44,4 +39,5 @@ export interface NewsComment extends News {
 export interface RouteInfo {
   path: string;
   page: View;
+  params: RegExp | null;
 }
