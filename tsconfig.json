@@ -1,12 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
-    "target": "ES2015",
     "module": "commonjs",
-    "alwaysStrict": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
     "sourceMap": true,
-    "downlevelIteration": true
+    "lib": ["es6", "DOM"]
   }
 }
